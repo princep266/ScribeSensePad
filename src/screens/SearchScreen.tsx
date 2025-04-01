@@ -71,12 +71,12 @@ const SearchScreen: React.FC<SearchScreenProps> = ({ navigation }) => {
         const voices = await Tts.voices();
         const languageVoices = voices
           .filter(voice => voice.language.startsWith(selectedLanguage))
-          .map(voice => voice.id);
+        .map(voice => voice.id);
         setAvailableVoices(languageVoices);
 
-        Tts.addEventListener('tts-start', () => setIsSpeaking(true));
-        Tts.addEventListener('tts-finish', () => setIsSpeaking(false));
-        Tts.addEventListener('tts-cancel', () => setIsSpeaking(false));
+    Tts.addEventListener('tts-start', () => setIsSpeaking(true));
+    Tts.addEventListener('tts-finish', () => setIsSpeaking(false));
+    Tts.addEventListener('tts-cancel', () => setIsSpeaking(false));
         Tts.addEventListener('tts-error', (error) => {
           console.error('TTS Error:', error);
           setError('Text-to-speech error occurred. Please try again.');
@@ -280,12 +280,12 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
           const titleMatch = section.match(/^(\d+\.|Related Topics:|Temas Relacionados:|Sujets Connexes:|Verwandte Themen:)(.*?)(?=\n|$)/);
           title = titleMatch 
             ? titleMatch[2].trim()
-            .replace(/[^\w\s\u0591-\u05F4\u0600-\u06FF\u0750-\u077F]/g, '')
+          .replace(/[^\w\s\u0591-\u05F4\u0600-\u06FF\u0750-\u077F]/g, '')
             : getDefaultTitle(index);
           
           snippet = section
             .replace(/^(\d+\.|Related Topics:|Temas Relacionados:|Sujets Connexes:|Verwandte Themen:)(.*?)(?=\n|$)/, '')
-            .trim()
+          .trim()
             .replace(/[^\w\s.,!?-\u0591-\u05F4\u0600-\u06FF\u0750-\u077F]/g, '')
             .replace(/\s+/g, ' ')
             .replace(/\n+/g, ' ');
@@ -453,6 +453,7 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
       backgroundColor: '#fff',
       elevation: 4,
       overflow: 'hidden',
+      width: '100%',
     },
     primaryResultCard: {
       backgroundColor: '#f8f9ff',
@@ -465,18 +466,22 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
       justifyContent: 'space-between',
       marginBottom: 16,
       paddingHorizontal: 4,
+      width: '100%',
     },
     resultTitle: {
       fontSize: 20,
       fontWeight: '600',
       color: theme.colors.primary,
       flex: 1,
+      flexWrap: 'wrap',
     },
     resultSnippet: {
       fontSize: 16,
       color: '#333',
       lineHeight: 26,
       letterSpacing: 0.3,
+      flexWrap: 'wrap',
+      width: '100%',
     },
     imageContainer: {
       marginVertical: 16,
@@ -501,9 +506,11 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
     },
     scrollView: {
       flex: 1,
+      width: '100%',
     },
     content: {
       padding: 20,
+      flexGrow: 1,
     },
     loadingContainer: {
       padding: 32,
@@ -564,6 +571,7 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
       flexDirection: 'row',
       alignItems: 'center',
       flex: 1,
+      flexWrap: 'wrap',
     },
     resultIcon: {
       marginRight: 12,
@@ -703,8 +711,8 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
                 />
               ))}
             </Menu>
-          </View>
-
+        </View>
+        
           <View style={styles.controlItem}>
             <View style={styles.ttsControls}>
               <Menu
@@ -768,7 +776,7 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
                         Pitch: {ttsPitch === 0.8 ? 'Low' : ttsPitch === 1.0 ? 'Normal' : 'High'}
                       </Text>
                       <Icon name="chevron-down" size={20} color={theme.colors.primary} />
-                    </View>
+            </View>
                   </Pressable>
                 }
               >
@@ -810,7 +818,7 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
           {isLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text style={styles.loadingText}>Getting information from Gemini AI...</Text>
+              <Text style={styles.loadingText}>Getting information from AI...</Text>
               <Text style={styles.loadingSubtext}>This may take a few moments</Text>
             </View>
           ) : error ? (

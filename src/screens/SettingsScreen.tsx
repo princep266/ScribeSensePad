@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, Vibration } from 'react-native';
 import { Surface, Switch, Button, Text, useTheme, SegmentedButtons } from 'react-native-paper';
 import { settingsService } from '../services/settingsService';
 import { UserPreferences } from '../models/UserPreferences';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Tts from 'react-native-tts';
+import { EventRegister } from 'react-native-event-listeners';
 
 type SettingType = 'switch' | 'segment' | 'button';
 

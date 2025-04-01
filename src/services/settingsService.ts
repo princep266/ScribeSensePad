@@ -1,60 +1,49 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserPreferences } from '../models/UserPreferences';
 
-const SETTINGS_KEY = 'user_preferences';
+const PREFERENCES_KEY = '@user_preferences';
 
-class SettingsService {
-  async savePreferences(preferences: UserPreferences): Promise<void> {
+const defaultPreferences: UserPreferences = {
+  enableTTS: true,
+  textLanguage: 'en',
+  textSimplification: true,
+  darkMode: false,
+  autoSave: true,
+  fontSize: 'medium',
+  vibrationFeedback: true,
+  autoTranslate: false,
+};
+
+export const settingsService = {
+  getPreferences: async (): Promise<UserPreferences> => {
     try {
-      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(preferences));
+      const storedPrefs = await AsyncStorage.getItem(PREFERENCES_KEY);
+      if (storedPrefs) {
+        return { ...defaultPreferences, ...JSON.parse(storedPrefs) };
+      }
+      return defaultPreferences;
+    } catch (error) {
+      console.error('Error loading preferences:', error);
+      return defaultPreferences;
+    }
+  },
+
+  savePreferences: async (preferences: UserPreferences): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
     } catch (error) {
       console.error('Error saving preferences:', error);
       throw error;
     }
-  }
+  },
 
-  async getPreferences(): Promise<UserPreferences> {
+  resetPreferences: async (): Promise<UserPreferences> => {
     try {
-      const data = await AsyncStorage.getItem(SETTINGS_KEY);
-      return data ? JSON.parse(data) : { 
-        enableTTS: true, 
-        textLanguage: 'en', 
-        textSimplification: true 
-      };
-    } catch (error) {
-      console.error('Error getting preferences:', error);
-      return { 
-        darkMode: false,
-        autoSave: true,
-        fontSize: 'medium',
-        vibrationFeedback: true,
-        autoTranslate: false,
-        enableTTS: true, 
-        textLanguage: 'en', 
-        textSimplification: true 
-      };
-    }
-  }
-
-  async updatePreference(key: keyof UserPreferences, value: any): Promise<void> {
-    try {
-      const currentPrefs = await this.getPreferences();
-      const newPrefs = { ...currentPrefs, [key]: value };
-      await this.savePreferences(newPrefs);
-    } catch (error) {
-      console.error('Error updating preference:', error);
-      throw error;
-    }
-  }
-
-  async resetPreferences(): Promise<void> {
-    try {
-      await AsyncStorage.removeItem(SETTINGS_KEY);
+      await AsyncStorage.removeItem(PREFERENCES_KEY);
+      return defaultPreferences;
     } catch (error) {
       console.error('Error resetting preferences:', error);
       throw error;
     }
   }
-}
-
-export const settingsService = new SettingsService();
+};
