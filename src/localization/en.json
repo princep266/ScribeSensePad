@@ -1,0 +1,31 @@
+{
+  "camera": {
+    "permission": {
+      "required": "Camera Permission Required",
+      "message": "Please enable camera access in your device settings.",
+      "retry": "Retry",
+      "grant": "Grant Permission"
+    },
+    "error": {
+      "notAvailable": "Camera not available",
+      "notReady": "Camera is not ready",
+      "processingFailed": "Failed to process image"
+    },
+    "buttons": {
+      "start": "Start",
+      "stop": "Stop",
+      "scan": "Scan Text",
+      "processing": "Processing..."
+    },
+    "ocr": {
+      "noText": "No text detected. Please try again.",
+      "error": "Error processing image. Try again."
+    }
+  },
+  "speech": {
+    "buttons": {
+      "speak": "Read Aloud",
+      "stop": "Stop Speaking"
+    }
+  }
+} 
