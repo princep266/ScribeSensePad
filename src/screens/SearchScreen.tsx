@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, SafeAreaView, ActivityIndicator, Image, Share, Dimensions, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, SafeAreaView, ActivityIndicator, Image, Share, Dimensions, Pressable, Linking } from 'react-native';
 import { Searchbar, Text, Surface, Card, useTheme, Button, IconButton, SegmentedButtons, Menu, Provider } from 'react-native-paper';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
@@ -18,10 +18,21 @@ interface SearchResult {
   imageUrl?: string;
 }
 
+interface VideoResult {
+  title: string;
+  thumbnailUrl: string;
+  source: string;
+  url: string;
+  duration?: string;
+  channelTitle?: string;
+  publishedAt?: string;
+}
+
 const GEMINI_API_KEY = 'AIzaSyDAOytJN5Kzm8VrKxo5KzITK1Plf2XN9ko';
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 const GOOGLE_SEARCH_API_KEY = 'AIzaSyDAOytJN5Kzm8VrKxo5KzITK1Plf2XN9ko';
 const GOOGLE_SEARCH_CX = 'f1fb9fdaac03649c7';
+const YOUTUBE_API_KEY = 'AIzaSyAEgrobMUH4TVna5gn9XHwD7zjdDvV-dcA';
 
 const SearchScreen: React.FC<SearchScreenProps> = ({ navigation }) => {
   const theme = useTheme();
@@ -45,6 +56,8 @@ const SearchScreen: React.FC<SearchScreenProps> = ({ navigation }) => {
   const [languageMenuVisible, setLanguageMenuVisible] = useState(false);
   const [ttsSpeedMenuVisible, setTtsSpeedMenuVisible] = useState(false);
   const [ttsPitchMenuVisible, setTtsPitchMenuVisible] = useState(false);
+  const [videoResults, setVideoResults] = useState<VideoResult[]>([]);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(false);
 
   const languages = [
     { code: 'en', name: 'English', ttsCode: 'en-US', placeholder: 'Ask anything...' },
@@ -107,6 +120,50 @@ const SearchScreen: React.FC<SearchScreenProps> = ({ navigation }) => {
     } catch (error) {
       console.error('Image search error:', error);
       return [];
+    }
+  };
+
+  const fetchVideos = async (query: string) => {
+    try {
+      setIsLoadingVideos(true);
+      console.log('Fetching videos for query:', query);
+      
+      const response = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=5&q=${encodeURIComponent(query)}&type=video&key=${YOUTUBE_API_KEY}`
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('YouTube API Error:', errorData);
+        throw new Error(`YouTube API error: ${errorData.error?.message || 'Unknown error'}`);
+      }
+
+      const data = await response.json();
+      console.log('YouTube API Response:', data);
+      
+      if (!data.items || data.items.length === 0) {
+        console.log('No videos found');
+        setVideoResults([]);
+        return;
+      }
+      
+      const videos: VideoResult[] = data.items.map((item: any) => ({
+        title: item.snippet.title,
+        thumbnailUrl: item.snippet.thumbnails.high.url,
+        source: 'YouTube',
+        url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+        duration: item.contentDetails?.duration,
+        channelTitle: item.snippet.channelTitle,
+        publishedAt: item.snippet.publishedAt
+      }));
+
+      console.log('Processed videos:', videos);
+      setVideoResults(videos);
+    } catch (error) {
+      console.error('Video search error:', error);
+      setVideoResults([]);
+    } finally {
+      setIsLoadingVideos(false);
     }
   };
 
@@ -182,6 +239,8 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
     
     try {
       const currentLanguage = languages.find(lang => lang.code === selectedLanguage);
+      
+      // Fetch text and images first
       const [textResponse, imageUrls] = await Promise.all([
         fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
           method: 'POST',
@@ -209,6 +268,7 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
         fetchImages(searchQuery)
       ]);
 
+      // Process text response
       const data = await textResponse.json();
       
       if (!textResponse.ok) {
@@ -220,15 +280,7 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
         return;
       }
 
-      if (data.error) {
-        console.error('API Response Error:', data.error);
-        const errorMessage = selectedLanguage === 'hi'
-          ? 'एक अज्ञात त्रुटि हुई। कृपया पुनः प्रयास करें।'
-          : `Error: ${data.error.message || 'Unknown error occurred'}`;
-        setError(errorMessage);
-        return;
-      }
-
+      // Process text results
       if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
         console.error('Unexpected API response format:', data);
         const errorMessage = selectedLanguage === 'hi'
@@ -243,10 +295,8 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
       // Split the content into sections based on language-specific markers
       let sections: string[];
       if (selectedLanguage === 'hi') {
-        // Hindi-specific section splitting
         sections = content.split(/(?=१\.|२\.|३\.|४\.|संबंधित विषय:)/).filter(Boolean);
       } else {
-        // Other languages section splitting
         sections = content.split(/(?=\d+\.|Related Topics:|Temas Relacionados:|Sujets Connexes:|Verwandte Themen:)/).filter(Boolean);
       }
       
@@ -299,6 +349,10 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
       });
 
       setResults(formattedResults);
+
+      // Fetch videos separately to avoid blocking the main search
+      fetchVideos(searchQuery);
+
     } catch (err) {
       console.error('Search error:', err);
       const errorMessage = selectedLanguage === 'hi'
@@ -344,6 +398,10 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
     } catch (error) {
       console.error('Error sharing:', error);
     }
+  };
+
+  const handleVideoPress = (url: string) => {
+    Linking.openURL(url);
   };
 
   const styles = StyleSheet.create({
@@ -646,6 +704,78 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
       color: '#333',
       marginHorizontal: 8,
     },
+    videoSection: {
+      marginTop: 24,
+      marginBottom: 16,
+      backgroundColor: '#fff',
+      borderRadius: 20,
+      padding: 16,
+      elevation: 4,
+    },
+    videoSectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 16,
+      paddingBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    },
+    videoSectionTitle: {
+      fontSize: 20,
+      fontWeight: '600',
+      color: theme.colors.primary,
+      marginLeft: 8,
+    },
+    videoCard: {
+      marginBottom: 12,
+      borderRadius: 16,
+      overflow: 'hidden',
+      backgroundColor: '#fff',
+      elevation: 2,
+    },
+    videoThumbnail: {
+      width: '100%',
+      height: 200,
+      backgroundColor: '#f5f5f5',
+    },
+    videoContent: {
+      padding: 16,
+    },
+    videoTitle: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: '#333',
+      marginBottom: 8,
+    },
+    videoMetadata: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 8,
+    },
+    videoSource: {
+      fontSize: 14,
+      color: '#666',
+    },
+    videoChannel: {
+      fontSize: 14,
+      color: '#666',
+    },
+    videoLoadingContainer: {
+      padding: 16,
+      alignItems: 'center',
+    },
+    videoErrorContainer: {
+      padding: 16,
+      alignItems: 'center',
+      backgroundColor: '#fff3f3',
+      borderRadius: 12,
+    },
+    videoErrorText: {
+      color: '#f44336',
+      textAlign: 'center',
+      marginTop: 8,
+    },
   });
 
   return (
@@ -896,6 +1026,57 @@ Machen Sie die Antwort detailliert, aber leicht verständlich.`,
                   </Card.Content>
                 </Card>
               ))}
+              <View style={styles.videoSection}>
+                <View style={styles.videoSectionHeader}>
+                  <Icon name="play-circle" size={24} color={theme.colors.primary} />
+                  <Text style={styles.videoSectionTitle}>
+                    {selectedLanguage === 'hi' ? 'संबंधित वीडियो' : 'Related Videos'}
+                  </Text>
+                </View>
+                
+                {isLoadingVideos ? (
+                  <View style={styles.videoLoadingContainer}>
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                  </View>
+                ) : videoResults.length > 0 ? (
+                  videoResults.map((video, index) => (
+                    <Pressable
+                      key={index}
+                      onPress={() => handleVideoPress(video.url)}
+                    >
+                      <Card style={styles.videoCard}>
+                        <Image
+                          source={{ uri: video.thumbnailUrl }}
+                          style={styles.videoThumbnail}
+                          resizeMode="cover"
+                        />
+                        <Card.Content style={styles.videoContent}>
+                          <Text style={styles.videoTitle} numberOfLines={2}>
+                            {video.title}
+                          </Text>
+                          <View style={styles.videoMetadata}>
+                            <Text style={styles.videoChannel}>
+                              {video.channelTitle}
+                            </Text>
+                            <Text style={styles.videoSource}>
+                              {video.source}
+                            </Text>
+                          </View>
+                        </Card.Content>
+                      </Card>
+                    </Pressable>
+                  ))
+                ) : (
+                  <View style={styles.videoErrorContainer}>
+                    <Icon name="video-off" size={24} color="#f44336" />
+                    <Text style={styles.videoErrorText}>
+                      {selectedLanguage === 'hi' 
+                        ? 'वीडियो लोड करने में समस्या हुई। कृपया बाद में पुनः प्रयास करें।'
+                        : 'Unable to load videos. Please try again later.'}
+                    </Text>
+                  </View>
+                )}
+              </View>
               <View style={styles.poweredByContainer}>
                 <Icon name="google" size={16} color="#666" />
                 <Text style={styles.poweredBy}>Powered by Google Gemini AI</Text>
